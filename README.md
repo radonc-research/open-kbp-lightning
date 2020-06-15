@@ -23,12 +23,3 @@ Pytorch Lightning >= 0.7.6
 numpy >= 1.18.2
 
 wandb >= 0.8.36
-
-## Created folder structure
-This repository will create a file structure that branches from a directory called _open-kbp_. The file structure
-will keep information about predictions from a model (called baseline in this example) and the model itself in the
- _results_ directory. It assume that the data provided for the OpenKBP competition is in a directory called 
- _provided-data_. This code will also make a directory called _submissions_ to house the zip files that can be
-  submitted to CodaLab for validation set evaluation (this code will generalize to test data once the test data is
-   released). Use this folder tree as a reference (it will more or less build itself).
-  
