@@ -47,7 +47,8 @@ class _3DLoss(nn.Module):
             if self.use_mask:
                 dim = x.shape[1]
                 size = x.shape[2:]
-                mask = interpolate(mask.repeat(1, dim, 1, 1, 1), size=size, mode='nearest')
+                rep = int(dim/mask.shape[1])
+                mask = interpolate(mask.repeat(1, rep, 1, 1, 1), size=size, mode='nearest')
                 feature_loss += w * self.weighted_loss(x, y, mask)
             else:
                 feature_loss += w*self.loss(x, y)
