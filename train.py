@@ -160,7 +160,7 @@ class DosePrediction(pl.LightningModule):
         for metric in outputs[0]['log']:       #Added by Ramsy
             metrics_mean[metric + '_mean'] = torch.stack([x['log'][metric] for x in outputs]).mean() 
         log_dict = metrics_mean
-        return {'test_loss_mean': val_loss_mean, 'log': log_dict, 'progress_bar': log_dict}
+        return {'test_loss_mean': test_loss_mean, 'log': log_dict, 'progress_bar': log_dict}
 
     def conversion_step(self, batch, batch_idx):
         ct, mask, structure, pat_id = batch['ct'], batch['possible_dose_mask'], batch['structure_masks'], batch['patient_list'][0][0]
