@@ -4,61 +4,61 @@ from provided_code.general_functions import get_paths, load_file
 import torch.utils.data as data
 from torch.nn.functional import interpolate, pad
 from torch import nn
-from kornia import augmentation as aug
-import kornia
+#from kornia import augmentation as aug
+#import kornia
 import pandas as pd
 import copy
 import matplotlib.pyplot as plt
 
 
 
-class transformation(nn.Module):
-    def __init__(self) -> None:
-        super(transformation, self).__init__()
+#class transformation(nn.Module):
+ #   def __init__(self) -> None:
+  #      super(transformation, self).__init__()
 
-        self.aff = aug.RandomAffine((-10.0, 10.0),
-                                    (0.1, 0.1), same_on_batch=True, resample=0)
+   #     self.aff = aug.RandomAffine((-10.0, 10.0),
+    #                                (0.1, 0.1), same_on_batch=True, resample=0)
 
-        #self.crop = aug.RandomCrop((128, 128))
+     #   #self.crop = aug.RandomCrop((128, 128))
 
-    def forward(self, input, param=None):
-            input = self.aff(input, param)
+    #def forward(self, input, param=None):
+     #       input = self.aff(input, param)
 
-            return input
+      #      return input
 
-from kornia.augmentation import AugmentationBase
+#from kornia.augmentation import AugmentationBase
 
-class MyRandomTransform(AugmentationBase):
-    def __init__(self, return_transform: bool = False) -> None:
-        super(MyRandomTransform, self).__init__(return_transform)
-        self.angles_list = torch.Tensor([[40], [80], [120], [160], [200], [240], [280], [320]])
+#class MyRandomTransform(AugmentationBase):
+ #   def __init__(self, return_transform: bool = False) -> None:
+  #      super(MyRandomTransform, self).__init__(return_transform)
+   #     self.angles_list = torch.Tensor([[40], [80], [120], [160], [200], [240], [280], [320]])
 
-    def generate_parameters(self, input_shape: torch.Size):
-        # generate the random parameters for your use case.
-        #angles_rad torch.Tensor = torch.rand(batch_shape) * kornia.pi
-        #angles_deg = kornia.rad2deg(angles_rad) * self.angle
-        if np.random.random() > 0.3:
-            index = np.random.randint(0, 7)
-            angles_deg = self.angles_list[index]
+    #def generate_parameters(self, input_shape: torch.Size):
+     #   # generate the random parameters for your use case.
+      #  #angles_rad torch.Tensor = torch.rand(batch_shape) * kornia.pi
+       # #angles_deg = kornia.rad2deg(angles_rad) * self.angle
+        #if np.random.random() > 0.3:
+     #       index = np.random.randint(0, 7)
+     #       angles_deg = self.angles_list[index]
 
-        else:
-            angles_deg = torch.Tensor([0])
-        return dict(angles=angles_deg)
+     #   else:
+     #       angles_deg = torch.Tensor([0])
+     #   return dict(angles=angles_deg)
 
-    def compute_transform(self, input, params):
-        # compute transformation
-        angles: torch.Tensor = params['angles'].type_as(input).repeat(input.shape[0])
-        center = torch.tensor([[64, 64]]).type_as(input).repeat(input.shape[0], 1)
-        transform = kornia.get_rotation_matrix2d(center, angles, torch.ones_like(angles))
-        return transform
+   # def compute_transform(self, input, params):
+    #    # compute transformation
+   #     angles: torch.Tensor = params['angles'].type_as(input).repeat(input.shape[0])
+   #     center = torch.tensor([[64, 64]]).type_as(input).repeat(input.shape[0], 1)
+    #    transform = kornia.get_rotation_matrix2d(center, angles, torch.ones_like(angles))
+    #    return transform
 
-    def apply_transform(self, input, params):
-        # compute transformation
-        transform = self.compute_transform(input, params)
+    #def apply_transform(self, input, params):
+     #   # compute transformation
+      #  transform = self.compute_transform(input, params)
 
-        # apply transformation and return
-        output = kornia.warp_affine(input, transform, (128, 128),'nearest')
-        return output
+       # # apply transformation and return
+        #output = kornia.warp_affine(input, transform, (128, 128),'nearest')
+        #return output
 
 class CTDoseDataSet(data.Dataset):
     """Generates data for tensorflow"""
@@ -87,9 +87,12 @@ class CTDoseDataSet(data.Dataset):
         self.trans = trans
         # Set files to be loaded
         self.required_files = None
-        self.aff_trans = MyRandomTransform()#transformation()
+       # self.aff_trans = MyRandomTransform()#transformation()
         self.mode_name = mode_name  # Defines the mode for which data must be loaded for
         self.set_mode(self.mode_name)  # Set load mode to prediction by default
+        
+        self.ct_scaling_factor = 4000.      #Added by Ramsy
+        self.dose_scaling_factor = 100.     #Added by Ramsy
 
     def __getitem__(self, index):#get_batch(self, index=None, patient_list=None):
         """Loads one batch of data
@@ -141,9 +144,9 @@ class CTDoseDataSet(data.Dataset):
                                 loaded_data[key] = pad(loaded_data[key], [10, 10, 10, 10, 10, 10], 'constant', 0)
                                 loaded_data[key] = loaded_data[key][:, seed_x:128+seed_x, seed_y:128+seed_y, seed_z:128+seed_z]
 
-            loaded_data['ct'] = ((loaded_data['ct'].clamp(0, 4000) / 4000))  # -0.5)/0.5
+            loaded_data['ct'] = ((loaded_data['ct'].clamp(0, self.ct_scaling_factor) /self.ct_scaling_factor))  # -0.5)/0.5
             if self.mode_name == 'training_model':
-                loaded_data['dose'] = ((loaded_data['dose'].clamp(0,100) / 100))  # -0.5)/0.5
+                loaded_data['dose'] = ((loaded_data['dose'].clamp(0, self.dose_scaling_factor) / self.dose_scaling_factor))  # -0.5)/0.5
 
         return loaded_data
 

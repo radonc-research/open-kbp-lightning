@@ -18,6 +18,7 @@ from provided_code.general_functions import sparse_vector_function
 import pandas as pd
 import torchvision
 
+from our_code.DVH_metrics import DVH        #Added by Ramsy
 
 
 np.random.seed(42)
@@ -57,10 +58,12 @@ class DosePrediction(pl.LightningModule):
     def val_dataloader(self):
         #hold_out_paths = self.plan_paths[self.hparams.num_train_pats:]  # list of paths used for held out testing
         self.data_loader_eval = dataloader(self.validation_data_paths, batch_size=1, trans=[128])
+        self.DVH_eval = DVH(self.data_loader_eval)     #Added by Ramsy
         return self.data_loader_eval
 
     def test_dataloader(self):
         self.data_loader_test = dataloader(self.test_data_paths, batch_size=1, trans=[128])
+        self.DVH_test = DVH(self.data_loader_test)     #Added by Ramsy
         return self.data_loader_test
 
     def configure_optimizers(self):
@@ -81,7 +84,7 @@ class DosePrediction(pl.LightningModule):
         loss = self.loss(pred, dose, mask)
 
         with torch.no_grad():
-            dose_score = (torch.sum(torch.abs((dose*100)-(pred*100)))/torch.sum(mask))
+            dose_score = (torch.sum(torch.abs((dose * self.data_loader_train.dataset.dose_scaling_factor) - (pred * self.data_loader_train.dataset.dose_scaling_factor))) / torch.sum(mask))
 
         log_dict = {'train_dose_score': dose_score}
 
@@ -101,10 +104,10 @@ class DosePrediction(pl.LightningModule):
 
         pred = self(torch.cat([ct, structure], dim=1)) * mask
 
-        dose_score = (torch.sum(torch.abs((dose * 100) - (pred * 100))) / torch.sum(mask))
+        dose_score = (torch.sum(torch.abs((dose * self.data_loader_eval.dataset.dose_scaling_factor) - (pred * self.data_loader_eval.dataset.dose_scaling_factor))) / torch.sum(mask))
 
-        #TODO: include addtional metrics for evaluation--> use already coded version in template
-        #DVH_loss = DVH(pred, dose, structure)
+        DVH_metrics = self.DVH_eval.calculate_DVH_metrics(batch, pred)       
+       
 
         if batch['patient_list'][0][0] == 'pt_210':
 
@@ -116,14 +119,21 @@ class DosePrediction(pl.LightningModule):
             image_stack = torchvision.utils.make_grid(torch.cat(images, dim=0), nrow=3)
             self.logger.experiment.log({'generated images': wandb.Image(image_stack)})
 
-        log_dict = {'val_loss': dose_score}
+        log_dict = {}
+        
+        for metric in DVH_metrics:
+            log_dict['val_' + metric] = DVH_metrics[metric]      
+        log_dict['val_loss'] = dose_score   
 
         return {'val_loss': dose_score, 'log': log_dict, 'progress_bar': log_dict}
 
 
     def validation_epoch_end(self, outputs):
         val_loss_mean = torch.stack([x['val_loss'] for x in outputs]).mean()
-        log_dict = {'val_loss_mean': val_loss_mean}
+        metrics_mean = {}      
+        for metric in outputs[0]['log']:      
+            metrics_mean[metric + '_mean'] = torch.stack([x['log'][metric] for x in outputs]).mean()
+        log_dict = metrics_mean
         return {'val_loss_mean': val_loss_mean, 'log': log_dict, 'progress_bar': log_dict}
 
     def test_step(self, batch, batch_idx):
@@ -131,20 +141,26 @@ class DosePrediction(pl.LightningModule):
 
         pred = self(torch.cat([ct, structure], dim=1)) * mask
 
-        dose_score = (torch.sum(torch.abs((dose * 100) - (pred * 100))) / torch.sum(mask))
+        dose_score = (torch.sum(torch.abs((dose * self.dataloader_test.dataset.dose_scaling_factor) - (pred * self.dataloader_test.dataset.dose_scaling_factor))) / torch.sum(mask))
 
-        #TODO: include addtional metrics for evaluation--> use already coded version in template
-        #DVH_loss = DVH(pred, dose, structure)
+        DVH_metrics = self.DVH_test.calculate_DVH_metrics(batch, pred)
 
-        log_dict = {'test_loss': dose_score}
-
+        log_dict = {}
+ 
+        for metric in DVH_metrics:
+            log_dict['test_' + metric] = DVH_metrics[metric]      #Added by Ramsy
+        log_dict['test_loss'] = dose_score   #Added by Ramsy
+        
         return {'test_loss': dose_score, 'log': log_dict, 'progress_bar': log_dict}
 
 
     def test_epoch_end(self, outputs):
-        val_loss_mean = torch.stack([x['test_loss'] for x in outputs]).mean()
-        log_dict = {'test_loss_mean': val_loss_mean}
-        return {'test_loss_mean': val_loss_mean, 'log': log_dict, 'progress_bar': log_dict}
+        test_loss_mean = torch.stack([x['test_loss'] for x in outputs]).mean()      #Changed val_loss_mean for test_loss_mean
+        metrics_mean = {}       #Added by Ramsy
+        for metric in outputs[0]['log']:       #Added by Ramsy
+            metrics_mean[metric + '_mean'] = torch.stack([x['log'][metric] for x in outputs]).mean() 
+        log_dict = metrics_mean
+        return {'test_loss_mean': test_loss_mean, 'log': log_dict, 'progress_bar': log_dict}
 
     def conversion_step(self, batch, batch_idx):
         ct, mask, structure, pat_id = batch['ct'], batch['possible_dose_mask'], batch['structure_masks'], batch['patient_list'][0][0]
