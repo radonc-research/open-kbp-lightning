@@ -18,6 +18,7 @@ from provided_code.general_functions import sparse_vector_function
 import pandas as pd
 import torchvision
 
+from our_code.DVH_metrics import DVH        #Added by Ramsy
 
 
 np.random.seed(42)
@@ -57,10 +58,12 @@ class DosePrediction(pl.LightningModule):
     def val_dataloader(self):
         #hold_out_paths = self.plan_paths[self.hparams.num_train_pats:]  # list of paths used for held out testing
         self.data_loader_eval = dataloader(self.validation_data_paths, batch_size=1, trans=[128])
+        self.DVH_eval = DVH(self.data_loader_eval)     #Added by Ramsy
         return self.data_loader_eval
 
     def test_dataloader(self):
         self.data_loader_test = dataloader(self.test_data_paths, batch_size=1, trans=[128])
+        self.DVH_test = DVH(self.data_loader_test)     #Added by Ramsy
         return self.data_loader_test
 
     def configure_optimizers(self):
@@ -103,8 +106,8 @@ class DosePrediction(pl.LightningModule):
 
         dose_score = (torch.sum(torch.abs((dose * 100) - (pred * 100))) / torch.sum(mask))
 
-        #TODO: include addtional metrics for evaluation--> use already coded version in template
-        #DVH_loss = DVH(pred, dose, structure)
+        
+       
 
         if batch['patient_list'][0][0] == 'pt_210':
 
