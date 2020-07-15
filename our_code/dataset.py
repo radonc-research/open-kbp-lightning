@@ -90,6 +90,9 @@ class CTDoseDataSet(data.Dataset):
        # self.aff_trans = MyRandomTransform()#transformation()
         self.mode_name = mode_name  # Defines the mode for which data must be loaded for
         self.set_mode(self.mode_name)  # Set load mode to prediction by default
+        
+        self.ct_scaling_factor = 4000.      #Added by Ramsy
+        self.dose_scaling_factor = 100.     #Added by Ramsy
 
     def __getitem__(self, index):#get_batch(self, index=None, patient_list=None):
         """Loads one batch of data
@@ -141,9 +144,9 @@ class CTDoseDataSet(data.Dataset):
                                 loaded_data[key] = pad(loaded_data[key], [10, 10, 10, 10, 10, 10], 'constant', 0)
                                 loaded_data[key] = loaded_data[key][:, seed_x:128+seed_x, seed_y:128+seed_y, seed_z:128+seed_z]
 
-            loaded_data['ct'] = ((loaded_data['ct'].clamp(0, 4000) / 4000))  # -0.5)/0.5
+            loaded_data['ct'] = ((loaded_data['ct'].clamp(0, self.ct_scaling_factor) /self.ct_scaling_factor))  # -0.5)/0.5
             if self.mode_name == 'training_model':
-                loaded_data['dose'] = ((loaded_data['dose'].clamp(0,100) / 100))  # -0.5)/0.5
+                loaded_data['dose'] = ((loaded_data['dose'].clamp(0, self.dose_scaling_factor) / self.dose_scaling_factor))  # -0.5)/0.5
 
         return loaded_data
 
