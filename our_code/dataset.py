@@ -130,7 +130,8 @@ class CTDoseDataSet(data.Dataset):
                     for key in loaded_data.keys():
                         if not isinstance(loaded_data[key], list):
                             if loaded_data[key].ndim == 4:
-                                loaded_data[key] = interpolate(torch.from_numpy(loaded_data[key].copy()).unsqueeze(0), scale_factor=transform/128).squeeze(0).float()
+                                loaded_data[key] = torch.from_numpy(loaded_data[key].copy()).float()
+                                #loaded_data[key] = interpolate(torch.from_numpy(loaded_data[key].copy()).unsqueeze(0), scale_factor=transform/128).squeeze(0).float()
 
 
                 elif transform == 'crop':
@@ -141,7 +142,7 @@ class CTDoseDataSet(data.Dataset):
                     for key in loaded_data.keys():
                         if not isinstance(loaded_data[key], list):
                             if loaded_data[key].ndim == 4:
-                                loaded_data[key] = pad(loaded_data[key], [10, 10, 10, 10, 10, 10], 'constant', 0)
+                                loaded_data[key] = pad(loaded_data[key], [5, 5, 5, 5, 5, 5], 'constant', 0)
                                 loaded_data[key] = loaded_data[key][:, seed_x:128+seed_x, seed_y:128+seed_y, seed_z:128+seed_z]
 
             loaded_data['ct'] = ((loaded_data['ct'].clamp(0, self.ct_scaling_factor) /self.ct_scaling_factor))  # -0.5)/0.5

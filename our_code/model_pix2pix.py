@@ -130,9 +130,14 @@ class UnetMaxSkipConnectionBlock(nn.Module):
             upconv = nn.ConvTranspose3d(inner_nc * 2, outer_nc,
                                         kernel_size=4, stride=2,
                                         padding=1)
+            if use_resnet:
+                downinterconv = ResnetBlock(inner_nc, norm_layer, use_bias=use_bias, act=downrelu)
 
-            down = [downconv]
-            up = [uprelu, upconv, nn.Sigmoid()]
+                down = [downconv, downrelu, downinterconv]
+                up = [uprelu, upconv, nn.Sigmoid()]
+            else:
+                down = [downconv]
+                up = [uprelu, upconv, nn.Sigmoid()]
             model = down + [submodule] + up
         elif innermost:
             upconv = nn.ConvTranspose3d(inner_nc, outer_nc,
@@ -149,9 +154,9 @@ class UnetMaxSkipConnectionBlock(nn.Module):
 
             if use_resnet:
                 upinterconv = ResnetBlock(outer_nc, norm_layer, use_bias=use_bias, act=uprelu)
-                downinterconv = ResnetBlock(input_nc, norm_layer, use_bias=use_bias, act=downrelu)
+                downinterconv = ResnetBlock(inner_nc, norm_layer, use_bias=use_bias, act=downrelu)
 
-                down = [downrelu, downinterconv, downconv, downnorm]
+                down = [downrelu, downconv, downnorm, downrelu, downinterconv]
                 up = [uprelu, upconv, upnorm, uprelu, upinterconv]
 
             else:
