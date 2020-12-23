@@ -18,7 +18,7 @@ This is the network implementation of the Prediction Team Vienna for the _open-k
 ## Requirements
 Pytorch >=1.4
 
-Pytorch Lightning >= 0.7.6
+Pytorch Lightning >= 0.7.6 and <= 0.8.5
 
 numpy >= 1.18.2
 
